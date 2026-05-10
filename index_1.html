@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>本の好み診断 — あなたの読書タイプを発見</title>
+<meta name="description" content="8問の二択に答えるだけで、あなたにぴったりの本のジャンルとおすすめ本をAIが診断します。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Noto Sans JP',sans-serif;background:#F8F7FF;color:#1a1a2e;min-height:100vh}
+
+  .page-header{background:#7F77DD;padding:1rem 1.5rem;display:flex;align-items:center;gap:10px}
+  .page-header-title{font-size:16px;font-weight:500;color:#EEEDFE;letter-spacing:0.02em}
+  .page-header-icon{font-size:22px}
+
+  .container{max-width:620px;margin:0 auto;padding:2rem 1.25rem}
+
+  .card{background:#fff;border-radius:16px;padding:2rem;box-shadow:0 2px 12px rgba(127,119,221,0.08);margin-bottom:1.5rem}
+
+  .header-card{background:#26215C;color:#EEEDFE;border-radius:16px;padding:2rem;margin-bottom:1.5rem;text-align:center}
+  .header-card h1{font-size:24px;font-weight:500;margin-bottom:8px}
+  .header-card p{font-size:14px;color:#AFA9EC;line-height:1.7}
+  .start-btn{display:inline-flex;align-items:center;gap:8px;margin-top:1.5rem;background:#7F77DD;color:#EEEDFE;border:none;border-radius:10px;padding:12px 28px;font-size:15px;font-weight:500;cursor:pointer;transition:opacity 0.15s;font-family:inherit}
+  .start-btn:hover{opacity:0.9}
+
+  .progress-track{height:6px;background:#CECBF6;border-radius:3px;margin-bottom:1.5rem}
+  .progress-fill{height:100%;background:#D4537E;border-radius:3px;transition:width 0.5s cubic-bezier(.4,0,.2,1)}
+  .step-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem}
+  .step-label{font-size:12px;color:#888}
+  .step-dots{display:flex;gap:5px}
+  .dot{width:7px;height:7px;border-radius:50%;background:#CECBF6}
+  .dot.done{background:#7F77DD}
+  .dot.active{background:#D4537E;width:18px;border-radius:4px}
+
+  .question{font-size:19px;font-weight:500;color:#1a1a2e;line-height:1.5;margin-bottom:0.4rem}
+  .sub{font-size:13px;color:#888;margin-bottom:1.5rem}
+  .choices{display:flex;flex-direction:column;gap:10px}
+
+  .choice-btn{display:flex;align-items:flex-start;gap:14px;padding:1rem 1.25rem;background:#fff;border:1px solid #e8e6f7;border-radius:12px;cursor:pointer;text-align:left;width:100%;transition:border-color 0.15s,background 0.15s,transform 0.1s;position:relative;overflow:hidden;font-family:inherit}
+  .choice-btn::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;border-radius:3px 0 0 3px;opacity:0;transition:opacity 0.15s}
+  .choice-btn.opt-a::before{background:#7F77DD}
+  .choice-btn.opt-b::before{background:#D4537E}
+  .choice-btn.opt-a:hover{border-color:#7F77DD;background:#EEEDFE}
+  .choice-btn.opt-b:hover{border-color:#D4537E;background:#FBEAF0}
+  .choice-btn.opt-a:hover::before,.choice-btn.opt-b:hover::before{opacity:1}
+  .choice-btn:active{transform:scale(0.99)}
+
+  .badge{width:28px;height:28px;border-radius:50%;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500}
+  .badge-a{background:#EEEDFE;color:#3C3489}
+  .badge-b{background:#FBEAF0;color:#72243E}
+  .choice-text{font-size:14px;color:#1a1a2e;line-height:1.5}
+  .choice-sub-text{font-size:12px;color:#888;margin-top:3px}
+
+  .loading-wrap{text-align:center;padding:3rem 1rem}
+  .spinner{width:36px;height:36px;border:3px solid #CECBF6;border-top-color:#7F77DD;border-radius:50%;animation:spin 0.8s linear infinite;margin:0 auto 1rem}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .loading-wrap p{font-size:14px;color:#555}
+
+  .result-header{background:#26215C;border-radius:16px;padding:1.75rem;margin-bottom:1.25rem;text-align:center}
+  .r-eyebrow{font-size:11px;letter-spacing:0.1em;color:#AFA9EC;margin-bottom:6px}
+  .r-type{font-size:28px;font-weight:500;color:#EEEDFE;margin-bottom:6px}
+  .r-catch{font-size:14px;color:#7F77DD}
+
+  .result-desc{border-left:3px solid #7F77DD;padding:1rem 1.25rem;background:#EEEDFE;border-radius:0 12px 12px 0;font-size:14px;color:#26215C;line-height:1.8;margin-bottom:1.25rem}
+
+  .slabel{font-size:11px;letter-spacing:0.08em;color:#888;text-transform:uppercase;margin-bottom:10px}
+
+  .traits-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:1.25rem}
+  .trait-card{padding:10px 14px;border-radius:10px;border:1px solid #f0eef9}
+  .trait-card:nth-child(1){background:#EEEDFE}
+  .trait-card:nth-child(2){background:#FBEAF0}
+  .trait-card:nth-child(3){background:#E1F5EE}
+  .trait-card:nth-child(4){background:#FAEEDA}
+  .trait-name{font-size:11px;color:#888;margin-bottom:5px}
+  .trait-bar-wrap{height:5px;background:rgba(0,0,0,0.08);border-radius:3px;margin-bottom:5px}
+  .trait-bar{height:5px;border-radius:3px}
+  .tc1 .trait-bar{background:#7F77DD}
+  .tc2 .trait-bar{background:#D4537E}
+  .tc3 .trait-bar{background:#1D9E75}
+  .tc4 .trait-bar{background:#BA7517}
+  .trait-val{font-size:12px;font-weight:500;color:#555}
+
+  .genre-list{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:1.25rem}
+  .genre-tag{padding:5px 14px;border-radius:99px;font-size:13px;font-weight:500}
+  .genre-tag:nth-child(1){background:#EEEDFE;color:#3C3489;border:1px solid #AFA9EC}
+  .genre-tag:nth-child(2){background:#FBEAF0;color:#72243E;border:1px solid #ED93B1}
+  .genre-tag:nth-child(3){background:#E1F5EE;color:#085041;border:1px solid #5DCAA5}
+  .genre-tag:nth-child(4){background:#FAEEDA;color:#633806;border:1px solid #EF9F27}
+  .genre-tag:nth-child(5){background:#E6F1FB;color:#0C447C;border:1px solid #85B7EB}
+
+  .books-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:1.25rem}
+  @media(max-width:500px){.books-grid{grid-template-columns:1fr}}
+  .book-card{border-radius:12px;border:1px solid #e8e6f7;background:#fff;overflow:hidden}
+  .book-cover-wrap{width:100%;aspect-ratio:2/3;background:#f0eef9;display:flex;align-items:center;justify-content:center;overflow:hidden}
+  .book-cover-wrap img{width:100%;height:100%;object-fit:cover}
+  .cover-placeholder{display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;padding:12px;text-align:center;gap:8px}
+  .cover-placeholder-title{font-size:11px;color:#888;line-height:1.4}
+  .book-accent{height:3px}
+  .book-info{padding:10px}
+  .book-num{font-size:10px;letter-spacing:0.05em;margin-bottom:3px;font-weight:500}
+  .book-title{font-size:12px;font-weight:500;color:#1a1a2e;line-height:1.4;margin-bottom:2px}
+  .book-author{font-size:11px;color:#888}
+  .book-reason{font-size:11px;color:#555;margin-top:6px;line-height:1.5;padding-top:6px;border-top:1px solid #f0eef9}
+
+  .next-card{padding:14px 18px;border-radius:12px;background:#26215C;color:#EEEDFE;margin-bottom:1.25rem;font-size:14px}
+  .next-label{font-size:11px;color:#7F77DD;margin-bottom:4px;letter-spacing:0.05em}
+
+  .action-row{display:flex;gap:10px;flex-wrap:wrap}
+  .btn{display:inline-flex;align-items:center;gap:6px;padding:11px 20px;border-radius:10px;font-size:13px;cursor:pointer;transition:opacity 0.15s,transform 0.1s;font-family:inherit;font-weight:500}
+  .btn:active{transform:scale(0.98)}
+  .btn-primary{background:#7F77DD;border:none;color:#EEEDFE}
+  .btn-primary:hover{opacity:0.9}
+  .btn-ghost{background:transparent;border:1px solid #e8e6f7;color:#555}
+  .btn-ghost:hover{background:#f8f7ff}
+
+  .avoid-note{font-size:13px;color:#888;margin-bottom:1.25rem}
+
+  .fade-in{animation:fadeIn 0.4s ease}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .api-key-notice{background:#FAEEDA;border:1px solid #EF9F27;border-radius:10px;padding:12px 16px;font-size:13px;color:#633806;margin-bottom:1.5rem;line-height:1.6}
+  .api-key-notice strong{font-weight:500}
+</style>
+</head>
+<body>
+
+<header class="page-header">
+  <span class="page-header-icon">📚</span>
+  <span class="page-header-title">本の好み診断</span>
+</header>
+
+<div class="container">
+
+  <div id="startScreen" class="fade-in">
+    <div class="header-card">
+      <h1>あなたの読書タイプを発見</h1>
+      <p>8問の二択に答えるだけで、AIがあなたにぴったりの<br>本のジャンルとおすすめ本を診断します。</p>
+      <button class="start-btn" onclick="startQuiz()">診断をはじめる →</button>
+    </div>
+    <div class="api-key-notice">
+      <strong>⚙️ 設定が必要：</strong> このサイトを動かすにはAnthropic APIキーが必要です。
+      下の入力欄にAPIキーを入力してください。
+      <br><br>
+      <input type="password" id="apiKeyInput" placeholder="sk-ant-api..." style="width:100%;padding:8px 12px;border:1px solid #EF9F27;border-radius:8px;font-size:13px;margin-top:4px;font-family:inherit;background:#fff">
+    </div>
+  </div>
+
+  <div id="quizScreen" style="display:none">
+    <div class="card">
+      <div class="step-row">
+        <div class="step-label" id="stepLabel">質問 1 / 8</div>
+        <div class="step-dots" id="stepDots"></div>
+      </div>
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+      <div class="question fade-in" id="questionText"></div>
+      <div class="sub" id="subText"></div>
+      <div class="choices" id="choicesWrap"></div>
+    </div>
+  </div>
+
+  <div id="loadingScreen" style="display:none">
+    <div class="card loading-wrap">
+      <div class="spinner"></div>
+      <p id="loadingMsg">あなたの読書DNAを解析中...</p>
+    </div>
+  </div>
+
+  <div id="resultScreen" style="display:none"></div>
+
+</div>
+
+<script>
+const QUESTIONS=[
+  {q:"物語の中で、何が一番あなたを動かしますか？",sub:"直感で選んでください",a:[{text:"予想を裏切る展開・どんでん返し",sub:"「そういうことか！」という快感"},{text:"登場人物の内面の変化・成長",sub:"「自分もそうだ」という共鳴"}],tags:[["plot_driven","surprise","logic"],["character_driven","empathy","growth"]]},
+  {q:"読書に求めるものは、現実からの「逃避」か「向き合い」か？",sub:"どちらに近いですか",a:[{text:"現実を忘れて別の世界に没頭したい",sub:"エスケープとしての読書"},{text:"自分や社会を深く理解したい",sub:"思索・自己成長のための読書"}],tags:[["escapism","fantasy","adventure"],["introspection","literary","social"]]},
+  {q:"本を読んだ後、どんな感覚が残るのが好きですか？",sub:"",a:[{text:"スッキリ・爽快・興奮が冷めない感じ",sub:"余韻より解放感"},{text:"ずっと頭に残る、静かな余韻",sub:"時間が経っても消えない感覚"}],tags:[["catharsis","thriller","action"],["lingering","philosophical","quiet"]]},
+  {q:"人間関係の描写で、どちらに引き込まれますか？",sub:"",a:[{text:"複雑な駆け引き・裏切り・権力争い",sub:"人間の暗い側面を直視する"},{text:"深い絆・愛情・支え合い",sub:"人間の温かさを感じたい"}],tags:[["dark","complex","suspense"],["warmth","relationship","humanist"]]},
+  {q:"あなたにとって「面白い文章」とは？",sub:"",a:[{text:"テンポが速く、引っ張られるような文章",sub:"気づいたら100ページ読んでいた"},{text:"一文一文に重みがある、味わえる文章",sub:"ゆっくり読み返したくなる"}],tags:[["pace","readable","genre"],["literary","prose","poetic"]]},
+  {q:"物語の「謎」について、あなたはどちら派？",sub:"",a:[{text:"謎は必ず解明されてほしい",sub:"答えがないと気持ち悪い"},{text:"解明されない謎があってもいい",sub:"余白や曖昧さが好き"}],tags:[["mystery","resolution","clear"],["ambiguous","literary","open"]]},
+  {q:"本の「世界観」について、どちらが好きですか？",sub:"",a:[{text:"緻密に作り込まれた架空の世界",sub:"ルールや設定に没頭できる"},{text:"現実と地続きで、リアルな世界",sub:"感情移入しやすい"}],tags:[["worldbuilding","fantasy","scifi"],["realistic","contemporary","grounded"]]},
+  {q:"理想の読書体験に近いのは？",sub:"最後の質問です",a:[{text:"一気読みして「最高だった！」と叫ぶ",sub:"エネルギーが爆発する体験"},{text:"読み終えてしばらく本を閉じて考える",sub:"静かに自分と向き合う体験"}],tags:[["entertainment","binge","excitement"],["contemplative","meaning","depth"]]}
+];
+
+const ACCENT_COLORS=['#7F77DD','#D4537E','#1D9E75'];
+let current=0;
+const scores={};
+const answers=[];
+
+function startQuiz(){
+  document.getElementById('startScreen').style.display='none';
+  document.getElementById('quizScreen').style.display='block';
+  render();
+}
+
+function buildDots(){
+  const wrap=document.getElementById('stepDots');wrap.innerHTML='';
+  for(let i=0;i<QUESTIONS.length;i++){const d=document.createElement('div');d.className='dot'+(i<current?' done':i===current?' active':'');wrap.appendChild(d)}
+}
+
+function addScore(tags){tags.forEach(t=>{scores[t]=(scores[t]||0)+1})}
+
+function render(){
+  const q=QUESTIONS[current];
+  document.getElementById('stepLabel').textContent=`質問 ${current+1} / ${QUESTIONS.length}`;
+  document.getElementById('progressFill').style.width=`${(current/QUESTIONS.length)*100}%`;
+  buildDots();
+  const qt=document.getElementById('questionText');qt.className='question fade-in';qt.textContent=q.q;
+  document.getElementById('subText').textContent=q.sub||'';
+  const wrap=document.getElementById('choicesWrap');wrap.innerHTML='';
+  q.a.forEach((opt,i)=>{
+    const btn=document.createElement('button');
+    btn.className=`choice-btn ${i===0?'opt-a':'opt-b'}`;
+    btn.innerHTML=`<span class="badge ${i===0?'badge-a':'badge-b'}">${['A','B'][i]}</span><div><div class="choice-text">${opt.text}</div>${opt.sub?`<div class="choice-sub-text">${opt.sub}</div>`:''}</div>`;
+    btn.onclick=()=>{answers.push({q:q.q,a:opt.text});addScore(q.tags[i]);current++;current>=QUESTIONS.length?showLoading():render()};
+    wrap.appendChild(btn);
+  });
+}
+
+function showLoading(){
+  document.getElementById('quizScreen').style.display='none';
+  document.getElementById('loadingScreen').style.display='block';
+  analyze();
+}
+
+async function fetchCover(title,author){
+  try{
+    const q=encodeURIComponent(`${title} ${author}`);
+    const res=await fetch(`https://www.googleapis.com/books/v1/volumes?q=${q}&maxResults=1`);
+    const data=await res.json();
+    if(data.items&&data.items[0]){
+      const img=data.items[0].volumeInfo.imageLinks;
+      if(img)return(img.thumbnail||img.smallThumbnail).replace('http://','https://');
+    }
+  }catch(e){}
+  return null;
+}
+
+async function analyze(){
+  const apiKey=document.getElementById('apiKeyInput')?document.getElementById('apiKeyInput').value.trim():'';
+  const msgs=["あなたの読書DNAを解析中...","8つの軸からタイプを判定中...","おすすめの本を厳選中...","表紙画像を取得しています..."];
+  let mi=0;
+  const iv=setInterval(()=>{mi=(mi+1)%msgs.length;document.getElementById('loadingMsg').textContent=msgs[mi]},1100);
+  const scoreStr=Object.entries(scores).sort((a,b)=>b[1]-a[1]).map(([k,v])=>`${k}:${v}`).join(', ');
+  const answerLog=answers.map((a,i)=>`Q${i+1}: ${a.q} → ${a.a}`).join('\n');
+  const prompt=`あなたは読書心理の専門家です。ユーザーが以下の8問に答えました。\n\n回答ログ:\n${answerLog}\n\nスコア集計: ${scoreStr}\n\nJSONのみを返してください。説明文もバッククォートも不要です。\n\n{"typeName":"○○型読者（漢字4〜6文字）","catchphrase":"詩的なキャッチフレーズ（15文字以内）","description":"このタイプの本質を3〜4文で（150文字程度）","traits":[{"name":"没入度","score":0から100},{"name":"感情重視","score":0から100},{"name":"世界観探求","score":0から100},{"name":"思索性","score":0から100}],"genres":["ジャンル1","ジャンル2","ジャンル3","ジャンル4","ジャンル5"],"avoid":"苦手な傾向（一言）","books":[{"title":"日本語の正確な書名","author":"著者名","reason":"合う理由を2文で"},{"title":"日本語の正確な書名","author":"著者名","reason":"合う理由を2文で"},{"title":"日本語の正確な書名","author":"著者名","reason":"合う理由を2文で"}],"nextRead":"今すぐ読んでほしい一冊のタイトルのみ"}`;
+  try{
+    const headers={"Content-Type":"application/json"};
+    if(apiKey)headers["x-api-key"]=apiKey;
+    const res=await fetch("https://api.anthropic.com/v1/messages",{method:"POST",headers,body:JSON.stringify({model:"claude-sonnet-4-20250514",max_tokens:1200,messages:[{role:"user",content:prompt}]})});
+    const data=await res.json();
+    const text=data.content.map(b=>b.text||'').join('');
+    const result=JSON.parse(text.replace(/```json|```/g,'').trim());
+    const covers=await Promise.all(result.books.map(b=>fetchCover(b.title,b.author)));
+    result.books=result.books.map((b,i)=>({...b,cover:covers[i]}));
+    clearInterval(iv);showResult(result);
+  }catch(e){
+    clearInterval(iv);
+    document.getElementById('loadingScreen').style.display='none';
+    alert('エラーが発生しました。APIキーを確認してください。');
+    location.reload();
+  }
+}
+
+function showResult(r){
+  document.getElementById('loadingScreen').style.display='none';
+  const wrap=document.getElementById('resultScreen');wrap.style.display='block';
+  const tcls=['tc1','tc2','tc3','tc4'];
+  const traitBars=r.traits.map((t,i)=>`<div class="trait-card ${tcls[i]}"><div class="trait-name">${t.name}</div><div class="trait-bar-wrap"><div class="trait-bar" style="width:${Math.round(t.score)}%"></div></div><div class="trait-val">${Math.round(t.score)}/100</div></div>`).join('');
+  const genreTags=r.genres.map(g=>`<span class="genre-tag">${g}</span>`).join('');
+  const bookCards=r.books.map((b,i)=>{
+    const coverHtml=b.cover?`<img src="${b.cover}" alt="${b.title}の表紙" loading="lazy">`:`<div class="cover-placeholder"><span style="font-size:28px;color:#AFA9EC">📖</span><div class="cover-placeholder-title">${b.title}</div></div>`;
+    return `<div class="book-card"><div class="book-cover-wrap">${coverHtml}</div><div class="book-accent" style="background:${ACCENT_COLORS[i]}"></div><div class="book-info"><div class="book-num" style="color:${ACCENT_COLORS[i]}">おすすめ ${i+1}</div><div class="book-title">『${b.title}』</div><div class="book-author">${b.author}</div><div class="book-reason">${b.reason}</div></div></div>`;
+  }).join('');
+  wrap.innerHTML=`<div class="fade-in">
+    <div class="result-header"><div class="r-eyebrow">あなたの読書タイプ</div><div class="r-type">${r.typeName}</div><div class="r-catch">${r.catchphrase}</div></div>
+    <div class="result-desc">${r.description}</div>
+    <div class="card">
+      <div class="slabel">読書パーソナリティ指標</div>
+      <div class="traits-grid">${traitBars}</div>
+      <div class="slabel">おすすめジャンル</div>
+      <div class="genre-list">${genreTags}</div>
+      ${r.avoid?`<div class="avoid-note">苦手な傾向: ${r.avoid}</div>`:''}
+    </div>
+    <div class="slabel">あなたへの厳選3冊</div>
+    <div class="books-grid">${bookCards}</div>
+    ${r.nextRead?`<div class="next-card"><div class="next-label">今すぐ読んでほしい一冊</div>『${r.nextRead}』</div>`:''}
+    <div class="action-row">
+      <button class="btn btn-ghost" onclick="location.reload()">↺ もう一度診断する</button>
+    </div>
+  </div>`;
+}
+</script>
+</body>
+</html>
